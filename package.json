@@ -1,0 +1,35 @@
+{
+  "name": "email-service",
+  "description": "Manta email service implimentation",
+  "version": "0.0.1-0",
+  "private": true,
+  "scripts": {
+    "start": "node app"
+  },
+  "licenses": [
+    {
+      "type": "MANTA",
+      "url": "http://manta.com/dont/steal/our/stuff"
+    }
+  ],
+  "dependencies":
+    { "express": "*"
+    , "common-lib": "git+ssh://git@github.com/mantacode/nodejs-common-lib.git"
+    , "manta-rabbit-node-lib": "git+ssh://git@github.com/mantacode/manta-rabbit-node-lib.git"
+    , "async": "*"
+    , "q": "*"
+    , "nconf": "*"
+    , "optimist": "*"
+    , "mongoose": "*"
+    , "superagent": "*"
+    },
+  "devDependencies":
+    { "jasmine-node": "*"
+    , "supertest": "*"
+    , "autotest": "*"
+    },
+  "scripts": {
+    "update": "npm pack ; ls *.tgz | tail --lines=1 | xargs -iDDD cp DDD event-relay-latest.tgz",
+    "test": "jasmine-node tests"
+  }
+}
