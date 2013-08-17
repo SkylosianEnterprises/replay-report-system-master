@@ -63,6 +63,7 @@ Blacklist.prototype.reduce = function (key, list, cb) {
 			outlist.push(finalOfType[typeIndex]);
 		}
 	}
+console.log("SENDING BACK LIST", outlist);
 	cb(null, outlist );
 };
 
@@ -73,6 +74,7 @@ Blacklist.prototype.reduce = function (key, list, cb) {
 Blacklist.prototype.deliver = function (window, version, cb) {
 	this.store.window(window).version(version).getAll( function (err, docs) {
 		if (err) cb(err);
+console.log("DOCS RETRIEVED", docs);
 		var outdocs = [];
 		for (var i in docs) {
 			var ele = docs[i];

@@ -1,26 +1,35 @@
-var EventConnection = require('rabbit-node-lib');
+var EventSystem = require('rabbit-node-lib');
 
 var BCDW = require('../bcdw.js');
+var Reducer = require('../ReportReducer.js');
 
 var ReportMgr = require('../lib/ReportMgr');
-
-var schemaMgr = new EventConnection.SchemaMgr(
-	{ "schemaSchema": "/home/skylos/rabbitmq-lib/schemata/JsonSchema.schema"
-	, "schemaDirectories": [ "/home/skylos/rabbitmq-lib/schemata" ]
-	} );
-
-var bcdw = new BCDW
-	( new ReportMgr(
+var reportMgr = new ReportMgr(
 		{ domains: ['testdomain']
 		, reports: [ {name:'blacklist', reportEngine:'blacklist', storageEngine:'memory' } ]
 		} )
-	, 'testing'
-	, schemaMgr
-	);
+var schemaMgr = new EventSystem.SchemaMgr(
+	  { "schemaSchema": "/home/david/rabbitmq-lib/schemata/JsonSchema.schema"
+	  , "schemaDirectories": [ "/home/david/rabbitmq-lib/schemata" ]
+	  } );
+
+var bcdw = new BCDW(
+  { ReportMgr: reportMgr
+	, environment: 'testing'
+	, schemaMgr: schemaMgr
+	} );
 
 bcdw.listenForEvents();
 
-var intsender = new EventConnection.Emitter(
+var reducer = new Reducer(
+  { ReportMgr: reportMgr
+	, environment: 'testing'
+	, schemaMgr: schemaMgr
+	} );
+
+reducer.listenForEvents();
+
+var intsender = new EventSystem.Emitter(
 	{ "exchange": 'cartographer-testing-replay'
 	, "routingKey": "reducer.testing.something"
 	, "rabbit": bcdw.getRabbit()
@@ -153,7 +162,6 @@ describe("Blacklists work this way", function () {
 		bcdw.beReady.then(function () {
 			console.log("EMITTING BLACKLIST EVENT");
 			var send = function () {
-				console.log("SENDING");
 				intsender.envelope(
 					{ payload: 
 						{ subscriptionType: 'blacklist'
@@ -178,8 +186,8 @@ describe("Blacklists work this way", function () {
 			setTimeout(send, 1300 );
 			setTimeout(send, 1400 );
 			setTimeout(send, 1500 );
-			setTimeout(function() {
-				console.log("EXECUTINIG REQUIEST FOR PROPFIND", (['/report','testdomain','blacklist','alltime','0', encodeURIComponent('dualblack@manta.com')].join('/')));
+			setTimeout( function() {
+				console.log("EXECUTING REQUEST FOR PROPFIND", (['/report','testdomain','blacklist','alltime','0', encodeURIComponent('dualblack@manta.com')].join('/')));
 				request(app)
 					.propfind(['/report','testdomain','blacklist','alltime','0', encodeURIComponent('dualblack@manta.com')].join('/'))
 					.set('Accept', 'application/json')
@@ -197,7 +205,7 @@ console.log("RETURNED REPORT", res.body);
 								done();
 						} ).not.toThrow();
 					} );
-			},4000 );
+			}, 4000 );
 		} );
 	} );
 
@@ -262,5 +270,6 @@ console.log("RETURNED REPORT", res.body);
 */
 	it("is allDone", function () {
 		bcdw.allDone();
+    expect(1).toBe(1);
 	} );
 } );

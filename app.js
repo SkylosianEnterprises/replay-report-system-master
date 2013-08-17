@@ -23,11 +23,7 @@ var express = require('express')
   , http = require('http')
   , path = require('path')
 	, Manager = require('./lib/ReportMgr')
-	, EventConnection = require('rabbit-node-lib')
 	;
-
-if (!EventConnection) throw "NO EVENT CONNECTION";
-var BCDW = require('./bcdw');
 
 // REPORT LOADING
 // TODO: make this dynamic somehow
@@ -38,12 +34,10 @@ var ReportMgr = new Manager(
 		, reports: [ {name:'blacklist', reportEngine:'Base', storageEngine:'memory' } ]
 		} );
 
-var schemaMgr = new EventConnection.SchemaMgr(
-	{ "schemaSchema": "/home/skylos/rabbitmq-lib/schemata/JsonSchema.schema"
-	, "schemaDirectories": [ "/home/skylos/rabbitmq-lib/schemata" ]
-	} );
-
-var Worker = new BCDW(ReportMgr , 'testing' , schemaMgr);
+var BCDW = require('./bcdw');
+var Worker = new BCDW( { reportMgr: ReportMgr , environment: 'testing' });
+var Reducer = require('./ReportReducer');
+var Reductor = new Reducer( { reportMgr: ReportMgr , environment: 'testing' });
 
 var reportRoutes = new Reports({ manager: ReportMgr });
 
@@ -92,7 +86,7 @@ var reportDefer = Q.defer();
 var windowDefer = Q.defer();
 var versionDefer = Q.defer();
 app.param('domain', function(req, res, next, domain){
-	req.DOMAIN = ReportMgr.domain(domain);
+	req.DOMAIN = ReportMgr.eventDomain(domain);
 	domainDefer.resolve(req.DOMAIN);
 	next();
 } );

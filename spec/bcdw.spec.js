@@ -6,8 +6,8 @@ var BCDW = require('../bcdw.js');
 var ReportMgr = require('../lib/ReportMgr');
 
 var schemaMgr = new EventConnection.SchemaMgr(
-	{ "schemaSchema": "/home/skylos/rabbitmq-lib/schemata/JsonSchema.schema"
-	, "schemaDirectories": [ "/home/skylos/rabbitmq-lib/schemata" ]
+	{ "schemaSchema": "/home/david/rabbitmq-lib/schemata/JsonSchema.schema"
+	, "schemaDirectories": [ "/home/david/rabbitmq-lib/schemata" ]
 	} );
 
 var bcdw = new BCDW

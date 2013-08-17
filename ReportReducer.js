@@ -3,52 +3,108 @@
 
 var os = require('os');
 var EventSystem = require('rabbit-node-lib');
-var Manager = require('lib/reportMgr');
 
-var reporters = new Manager(
-		{ domains: ['testdomain']
-		, reports:
-			[ {name:'testreport', reportEngine:'base', storageEngine:'memory'} ]
-		}
-	);
-var domain = master; // TODO: configuration for this daemon
+function Reducer( options ) {
+  this.reporters = options.reportMgr;
+  this.rabbit = options.rabbit;
+  this.environment = options.environment;
+	console.log("CONSTRUCTING REDUCER IN ENVIRONMENT", this.environment);
 
-var replayexchangename = 'reducer-+process.env('NODE_ENV')+'-replay';
-var internalexchangename = 'reducer-+process.env('NODE_ENV')+'-internal';
-var originexchangename = 'MantaEventPersist'
-var originqueuename = 'queue-for-mapreducer-'+process.env('NODE_ENV')+'-origin';
-var internalqueuename = 'queue-for-mapreducer-'+process.env('NODE_ENV')+'-internal';
+  this.replayexchangename = 'reducer-'+this.environment+'-replay';
+  this.internalexchangename = 'reducer-'+this.environment+'-internal';
+  this.originexchangename = 'MantaEventPersist'
+  this.originqueuename = 'queue-for-mapreducer-'+this.environment+'-origin';
+  this.internalqueuename = 'queue-for-mapreducer-'+this.environment+'-internal';
 
-var rabbit = new EventConnection.Rabbit(
-		{ connection: { url: "amqp://localhost:5672//" } 
+  this.receiver = this.getReceiver();
+}
+module.exports = Reducer;
+
+Reducer.prototype.listenForEvents = function () {
+  this.getReceiver().on( 'StorageDelta', function () {
+    console.log("FOUND A STORAGE DELTA");
+  } );
+
+  this.getRabbit().beReady.then( function (rabbit) {
+/*
+
+    // activates this function
+    rabbit.on( internalqueuename, function (message, headers, deliveryInfo, queue) {
+	    var domain = headers.domain;
+	    var report = headers.report;
+	    if (!reportermap[report]) return console.log("report "+headers.report+" not loaded"); // no operation if we have no report
+	    var window = headers.window;
+	    var codeversion = headers.codeVersion;
+	    var key = deliveryInfo.routingKey;
+	    var data = message;
+    
+	    reportermap[report].doReduce(sorted);
+    
+    } );
+*/
+    
+    rabbit.on( 'Rabbit_QueueReady', function (queue) {
+	    console.log("REDUCER Queue ready - " + queue);
+    } );
+    
+    rabbit.on( 'Rabbit_ExchangeReady', function (exchange) {
+	    console.log("REDUCER Exchange ready - " + exchange);
+    } );
+  } );
+
+// this call
+// this.emitter.emit(this.name, this.codeversion, this.domain, this.report, window, key, data);
+}
+
+Reducer.prototype.getRabbit = function () {
+	if (this.rabbit) return this.rabbit;
+	return this.rabbit = new EventSystem.Rabbit(
+		{ connection: { url: "amqp://localhost:5672//" } }
+  );
+};
+
+
+Reducer.prototype.getSchemaMgr = function () {
+	if (this.schemaMgr) return this.schemaMgr;
+  return this.schemaMgr = new EventSystem.SchemaMgr(
+	  { "schemaSchema": "/home/david/rabbitmq-lib/schemata/JsonSchema.schema"
+	  , "schemaDirectories": [ "/home/david/rabbitmq-lib/schemata" ]
+	  } );
+};
+
+Reducer.prototype.getReceiver = function () {
+  if (this.reciever) return this.reciever;
+  return this.reciever = new EventSystem.Receiver(
+		{ rabbit: this.getRabbit()
+		, schemaMgr: this.getSchemaMgr()
 		, exchanges:
-			[ { name: exchangename
+			[ { name: this.replayexchangename
 				, type: 'direct'
 				, passive: false
 				, durable: false
 				, autoDelete: true
 				, auto_delete: true
 				}
-			, { name: internalexchangename
+			, { name: this.internalexchangename
 				, type: 'topic'
 				, passive: false
 				, durable: true
 				, autoDelete: false
 				, auto_delete: false
 				}
-			, { name: originexchangename
+			, { name: this.originexchangename
 				, type: 'topic'
 				, passive: false
-				, durable: true
+				, durable: false
 				, autoDelete: false
 				, auto_delete: false
 				}
 			]
 		, queues:
-			[ { "name": internalqueuename
+			[ { "name": this.internalqueuename
 				, "bindings":
 					[ { "routingKey": '#'
-						, "exchange": internalexchangename
+						, "exchange": this.internalexchangename
 						}
 					]
 				, "passive": false
@@ -63,13 +119,13 @@ var rabbit = new EventConnection.Rabbit(
 					, "prefetchCount": 1
 					}
 				}
-			, { "name": originqueuename
+			, { "name": this.originqueuename
 				, "bindings":
 					[ { "routingKey": 'persist.#'
-						, "exchange": originexchangename
+						, "exchange": this.originexchangename
 						}
-					, { "routingKey": 'reducer.'+process.env('NODE_ENV')+'.#'
-						, "exchange": replayexchangename
+					, { "routingKey": 'reducer.'+this.environment+'.#'
+						, "exchange": this.replayexchangename
 						}
 					]
 				, "passive": false
@@ -86,35 +142,5 @@ var rabbit = new EventConnection.Rabbit(
 				}
 			]
 		} );
-
-
-rabbit.on( originqueuename, function (message, headers, deliveryInfo, queue) {
-	for (var reporter in reporters) {
-		reporters.map(message);
-	}
-} );
-
-// this call
-// this.emitter.emit(this.name, this.codeversion, this.domain, this.report, window, key, data);
-// activates this function
-rabbit.on( internalqueuename, function (message, headers, deliveryInfo, queue) {
-	var domain = headers.domain;
-	var report = headers.report;
-	if (!reportermap[report]) return console.log("report "+headers.report+" not loaded"); // no operation if we have no report
-	var window = headers.window;
-	var codeversion = headers.codeVersion;
-	var key = deliveryInfo.routingKey;
-	var data = message;
-
-	reportermap[report].doReduce(sorted);
-
-} );
-
-rabbit.on( 'Rabbit_QueueReady', function (queue) {
-	console.log("Queue ready - " + queue);
-} );
-
-rabbit.on( 'Rabbit_ExchangeReady', function (exchange) {
-	console.log("Exchange ready - " + exchange);
-} );
+};
 

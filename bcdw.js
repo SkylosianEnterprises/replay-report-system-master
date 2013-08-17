@@ -9,46 +9,47 @@ var Manager = require('./lib/ReportMgr');
 var util = require('util');
 var Q = require('q');
 
-var superagent = require('superagent');
-
 var managerDefer = Q.defer();
 var getManager = managerDefer.promise;
 
-function BCDW (ReportMgr, environment, schemaMgr) {
+function BCDW (options) {
 	var self = this;
 	EventEmitter.call(this);
 	self.readyDefer = Q.defer();
 	self.beReady = self.readyDefer.promise;
-	console.log("CONSTRUCTING BCDW IN ENVIRONMENT", environment);
-	this.manager = ReportMgr;
+	console.log("CONSTRUCTING BCDW IN ENVIRONMENT", this.environment);
+	this.manager = options.ReportMgr;
+	this.rabbit = options.rabbit;
+	this.schemaMgr = options.schemaMgr;
+	this.environment = options.environment;
 
-	this.environment = environment;
-
-	this.replayexchangename = 'cartographer-'+environment+'-replay';
-	this.internalexchangename = 'cartographer-'+environment+'-internal';
+	this.replayexchangename = 'cartographer-'+this.environment+'-replay';
+	this.internalexchangename = 'cartographer-'+this.environment+'-internal';
 	this.originexchangename = 'MantaEventPersist'
-	this.originqueuename = 'queue-for-cartographer-'+environment+'-origin';
-	this.internalqueuename = 'queue-for-cartographer-'+environment+'-internal';
+	this.originqueuename = 'queue-for-cartographer-'+this.environment+'-origin';
+	this.internalqueuename = 'queue-for-cartographer-'+this.environment+'-internal';
 
 	this.deltaEmitter = new EventSystem.Emitter(
 		{ "exchange": this.internalexchangename
 		, "routingKey": "something"
 		, "rabbit": this.getRabbit()
-		, "schemaMgr": schemaMgr
+		, "schemaMgr": this.getSchemaMgr()
 		} );
-	ReportMgr.on('insert', function ( event ) {
-		event.action = 'insert';
-		console.log("FOUND INSERT FROM REPORTMGR", event);
-		self.deltaEmitter.envelope(
-			{ payload: event 
-			, eventType: 'StorageDelta'
-			, actor:
-				{ id:os.hostname() + process.pid
-				, type:'bcdw'
-				}
-			} ).emit();
+	getManager.then(function (manager) { 
+    manager.on('insert', function ( event ) {
+  		event.action = 'insert';
+		  console.log("FOUND INSERT FROM REPORTMGR", event);
+		  self.deltaEmitter.envelope(
+			  { payload: event 
+			  , eventType: 'StorageDelta'
+			  , actor:
+				  { id:os.hostname() + process.pid
+				  , type:'bcdw'
+				  }
+			  } ).emit();
+	  } );
 	} );
-	managerDefer.resolve(ReportMgr);
+	managerDefer.resolve(this.ReportMgr);
 
 }
 util.inherits(BCDW, EventEmitter);
@@ -61,6 +62,14 @@ var configDefer = Q.defer();
 
 BCDW.prototype.allDone = function () {
 	if (this.rabbit) this.rabbit.allDone();
+};
+
+BCDW.prototype.getSchemaMgr = function () {
+	if (this.schemaMgr) return this.schemaMgr;
+  return this.schemaMgr = new EventSystem.SchemaMgr(
+	  { "schemaSchema": "/home/david/rabbitmq-lib/schemata/JsonSchema.schema"
+	  , "schemaDirectories": [ "/home/david/rabbitmq-lib/schemata" ]
+	  } );
 };
 
 BCDW.prototype.getRabbit = function () {
@@ -158,17 +167,18 @@ BCDW.prototype.listenForEvents = function () {
 	// activates this function
 	rabbit.on( this.internalqueuename, function (message, headers, deliveryInfo, queue) {
 		// TODO: We probably should be using the reciever for this which does this automatically.
-		message.payload = JSON.parse(message.payload);
-		console.log("RECIEVED INTERNAL MESSAGE", message);
-		var report = self.manager.eventDomain(message.payload.domain).report(message.payload.report);
-		if (!report) return console.warn("report "+message.payload.report+" not loaded"); // no operation if we have no report
-		var window = message.payload.window;
-		var version = message.payload.version;
-		var codeversion = message.payload.codeVersion;
-		var key = deliveryInfo.routingKey;
-		var data = message;
-	
-		report.doReduce(window, version, key);
+    getManager.then(function(manager) {
+		  message.payload = JSON.parse(message.payload);
+		  var report = manager.eventDomain(message.payload.domain).report(message.payload.report);
+		  if (!report) return console.warn("report "+message.payload.report+" not loaded"); // no operation if we have no report
+		  var window = message.payload.window;
+		  var version = message.payload.version;
+		  var codeversion = message.payload.codeVersion;
+		  var key = deliveryInfo.routingKey;
+		  var data = message;
+   	
+		  report.doReduce(window, version, key);
+    } );
 	
 	} );
 
