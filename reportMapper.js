@@ -2,7 +2,7 @@
 // configured reports.
 
 var os = require('os');
-var EventSystem = require('manta-rabbit-node-lib');
+var EventSystem = require('rabbit-node-lib');
 
 var replayexchangename = 'reducer-+process.env('NODE_ENV')+'-replay';
 var internalexchangename = 'reducer-+process.env('NODE_ENV')+'-internal';

@@ -1,4 +1,5 @@
 // template for a class that processes events and modifies a report
+var async = require('async');
 
 function ReportProcessor (store) {
 	if (!store) throw "store required";
@@ -131,9 +132,20 @@ ReportProcessor.prototype.latest = function (window, cb) {
 // doReduce - fetch the keys, fetch each list, reduce them.
 //
 // implimentation of the operation of doing a reduce
+/*ReportProcessor.prototype.doReduce = function (window, version, cb) {
+	var self = this;
+	// TODO: may want to spread this over workers?  Maybe emit 'reduce this key' events?
+	self.store.window(window).version(version).keys( function (err, keys ) {
+		if (err) throw err;
+		async.map(keys, function(key, mapcb) {
+			self.doReduceKey(window, version, key, mapcb);
+		}, cb);
+	} );
+};
+*/
 ReportProcessor.prototype.doReduce = function (window, version, key, cb) {
 	var self = this;
-	// retrieve the list (TODO: can this work with a portion of it?)
+	// retrieve the list (TODO: can this work with a portion of the list?)
 	self.store.window(window).version(version).list(key).raw(function(err, data) {
 		if (err) return cb(err);
 		// reduce the sorted list to its smallest form

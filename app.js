@@ -23,9 +23,10 @@ var express = require('express')
   , http = require('http')
   , path = require('path')
 	, Manager = require('./lib/ReportMgr')
-	, EventConnection = require('manta-rabbit-node-lib')
+	, EventConnection = require('rabbit-node-lib')
 	;
 
+if (!EventConnection) throw "NO EVENT CONNECTION";
 var BCDW = require('./bcdw');
 
 // REPORT LOADING
@@ -38,8 +39,8 @@ var ReportMgr = new Manager(
 		} );
 
 var schemaMgr = new EventConnection.SchemaMgr(
-	{ "schemaSchema": "/home/dihnen/rabbitmq-lib/schemata/JsonSchema.schema"
-	, "schemaDirectories": [ "/home/dihnen/rabbitmq-lib/schemata" ]
+	{ "schemaSchema": "/home/skylos/rabbitmq-lib/schemata/JsonSchema.schema"
+	, "schemaDirectories": [ "/home/skylos/rabbitmq-lib/schemata" ]
 	} );
 
 var Worker = new BCDW(ReportMgr , 'testing' , schemaMgr);

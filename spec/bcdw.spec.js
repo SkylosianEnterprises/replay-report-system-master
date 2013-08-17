@@ -1,13 +1,13 @@
 
-var EventConnection = require('manta-rabbit-node-lib');
+var EventConnection = require('rabbit-node-lib');
 
 var BCDW = require('../bcdw.js');
 
 var ReportMgr = require('../lib/ReportMgr');
 
 var schemaMgr = new EventConnection.SchemaMgr(
-	{ "schemaSchema": "/home/dihnen/rabbitmq-lib/schemata/JsonSchema.schema"
-	, "schemaDirectories": [ "/home/dihnen/rabbitmq-lib/schemata" ]
+	{ "schemaSchema": "/home/skylos/rabbitmq-lib/schemata/JsonSchema.schema"
+	, "schemaDirectories": [ "/home/skylos/rabbitmq-lib/schemata" ]
 	} );
 
 var bcdw = new BCDW
@@ -78,7 +78,7 @@ describe("map happens appropriately", function () {
 				expect(docs.length).toBe(2);
 				done();
 			} );
-		}, 5000 );
+		}, 2000 );
 	} );
 } );
 

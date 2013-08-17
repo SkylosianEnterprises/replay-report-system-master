@@ -69,10 +69,14 @@ describe('the report base api', function () {
 			if (err) throw err;
 			report.emit('alltime', 'dog', {'event':"else"}, function (err) {
 				if (err) throw err;
-				report.doReduce('alltime', 'dog', function (err, report) {
+				report.latest('alltime', function (err, version) {
 					if (err) throw err;
-					expect(report).toEqual([{ event : 'something' }, { event : 'else' }]);
-					done();
+					report.doReduce('alltime', version, 'dog', function (err, report) {
+						console.log("REDUCE CALLBACK ACTIVATED");
+						if (err) throw err;
+						expect(report).toEqual([{ event : 'something' }, { event : 'else' }]);
+						done();
+					} );
 				} );
 			} );
 		} );

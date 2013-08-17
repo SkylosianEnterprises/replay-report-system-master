@@ -1,5 +1,5 @@
 {
-  "name": "email-service",
+  "name": "replay-report-system",
   "description": "Manta email service implimentation",
   "version": "0.0.1-0",
   "private": true,
@@ -12,10 +12,12 @@
       "url": "http://manta.com/dont/steal/our/stuff"
     }
   ],
+  "ddependencies":
+    { "common-lib": "git+ssh://git@github.com/mantacode/nodejs-common-lib.git"
+		},
   "dependencies":
     { "express": "*"
-    , "common-lib": "git+ssh://git@github.com/mantacode/nodejs-common-lib.git"
-    , "manta-rabbit-node-lib": "git+ssh://git@github.com/mantacode/manta-rabbit-node-lib.git"
+    , "rabbit-node-lib": "git+ssh://git@github.com/SkylosianEnterprises/rabbit-node-lib.git"
     , "async": "*"
     , "q": "*"
     , "nconf": "*"

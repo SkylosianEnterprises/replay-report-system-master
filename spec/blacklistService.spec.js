@@ -1,12 +1,12 @@
-var EventConnection = require('manta-rabbit-node-lib');
+var EventConnection = require('rabbit-node-lib');
 
 var BCDW = require('../bcdw.js');
 
 var ReportMgr = require('../lib/ReportMgr');
 
 var schemaMgr = new EventConnection.SchemaMgr(
-	{ "schemaSchema": "/home/dihnen/rabbitmq-lib/schemata/JsonSchema.schema"
-	, "schemaDirectories": [ "/home/dihnen/rabbitmq-lib/schemata" ]
+	{ "schemaSchema": "/home/skylos/rabbitmq-lib/schemata/JsonSchema.schema"
+	, "schemaDirectories": [ "/home/skylos/rabbitmq-lib/schemata" ]
 	} );
 
 var bcdw = new BCDW
@@ -136,12 +136,12 @@ describe("Blacklists work this way", function () {
 				report.deliver('alltime', 0, function (err, docs) {
 					if (err) throw err;
 					if (docs) found = docs;
-				expect(docs).toContain( [
+				expect(docs).toContain(
 					{ time: now
 					, type: 'testemailtype'
 					, action: 'delete'
 					, email: 'singleblack@manta.com' 
-					} ] );
+					} );
 				done();
 				} );
 			}, 4000 );
@@ -150,9 +150,10 @@ describe("Blacklists work this way", function () {
 
 	it("is success to re-add an email", function (done) {
 		var now = new Date().getTime();
-		bcdw.once('ready', function () {
+		bcdw.beReady.then(function () {
 			console.log("EMITTING BLACKLIST EVENT");
 			var send = function () {
+				console.log("SENDING");
 				intsender.envelope(
 					{ payload: 
 						{ subscriptionType: 'blacklist'
@@ -259,4 +260,7 @@ console.log("RETURNED REPORT", res.body);
 	} );
 
 */
+	it("is allDone", function () {
+		bcdw.allDone();
+	} );
 } );

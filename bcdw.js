@@ -2,7 +2,7 @@
 // configured reports.
 
 var os = require('os');
-var EventSystem = require('manta-rabbit-node-lib');
+var EventSystem = require('rabbit-node-lib');
 var EventEmitter = require('events').EventEmitter;
 var DeltaSender = require('./lib/DeltaSender');
 var Manager = require('./lib/ReportMgr');
@@ -17,6 +17,8 @@ var getManager = managerDefer.promise;
 function BCDW (ReportMgr, environment, schemaMgr) {
 	var self = this;
 	EventEmitter.call(this);
+	self.readyDefer = Q.defer();
+	self.beReady = self.readyDefer.promise;
 	console.log("CONSTRUCTING BCDW IN ENVIRONMENT", environment);
 	this.manager = ReportMgr;
 
@@ -138,7 +140,7 @@ BCDW.prototype.listenForEvents = function () {
 	var self = this;
 	var rabbit = this.getRabbit();
 
-	setTimeout(function(){self.emit("ready")},1000);
+	setTimeout(function(){self.emit("ready");self.readyDefer.resolve(self);},1000);
 	rabbit.on( this.originqueuename, function (message, headers, deliveryInfo, queue) {
 		if (typeof message.payload == 'string') {
 			message.payload = JSON.parse(message.payload);
@@ -155,10 +157,13 @@ BCDW.prototype.listenForEvents = function () {
 	// this.emitter.emit(this.name, this.codeversion, this.domain, this.report, window, key, data);
 	// activates this function
 	rabbit.on( this.internalqueuename, function (message, headers, deliveryInfo, queue) {
+		// TODO: We probably should be using the reciever for this which does this automatically.
+		message.payload = JSON.parse(message.payload);
 		console.log("RECIEVED INTERNAL MESSAGE", message);
 		var report = self.manager.eventDomain(message.payload.domain).report(message.payload.report);
 		if (!report) return console.warn("report "+message.payload.report+" not loaded"); // no operation if we have no report
 		var window = message.payload.window;
+		var version = message.payload.version;
 		var codeversion = message.payload.codeVersion;
 		var key = deliveryInfo.routingKey;
 		var data = message;
